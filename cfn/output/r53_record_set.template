@@ -1,0 +1,99 @@
+{
+   "Parameters" : {
+      "RecordSetName" : {
+         "Type" : "String",
+         "ConstraintDescription" : "must be a valid Record Set Name",
+         "Description" : "Record Set Name"
+      },
+      "EnvironmentName" : {
+         "Type" : "String",
+         "Default" : "R53 Record Set",
+         "ConstraintDescription" : "must be a valid environment name",
+         "Description" : "Name applied to all resources within the stack"
+      },
+      "RecordSetType" : {
+         "Type" : "String",
+         "ConstraintDescription" : "must be a valid type",
+         "Description" : "Target stacks resource record type"
+      },
+      "StackType" : {
+         "Type" : "String",
+         "Default" : "R53 Record Set",
+         "ConstraintDescription" : "must be a valid stack type",
+         "Description" : "Stack type"
+      },
+      "Owner" : {
+         "Type" : "String",
+         "ConstraintDescription" : "must be a valid email address",
+         "Description" : "Stack owner"
+      },
+      "HostedZoneName" : {
+         "Type" : "String",
+         "ConstraintDescription" : "must be a valid hostname",
+         "Description" : "Service hosted zone name"
+      },
+      "ResourceRecordValue" : {
+         "Type" : "String",
+         "ConstraintDescription" : "must be a valid resource record value",
+         "Description" : "Resource record value"
+      },
+      "RecordSetTtl" : {
+         "Type" : "Number",
+         "Default" : 60,
+         "ConstraintDescription" : "must be a valid number",
+         "Description" : "Resource record TTL"
+      }
+   },
+   "Resources" : {
+      "RecordSet" : {
+         "Type" : "AWS::Route53::RecordSet",
+         "Properties" : {
+            "ResourceRecords" : [
+               {
+                  "Ref" : "ResourceRecordValue"
+               }
+            ],
+            "Type" : {
+               "Ref" : "RecordSetType"
+            },
+            "HostedZoneName" : {
+               "Fn::Join" : [
+                  "",
+                  [
+                     {
+                        "Ref" : "HostedZoneName"
+                     },
+                     "."
+                  ]
+               ]
+            },
+            "TTL" : {
+               "Ref" : "RecordSetTtl"
+            },
+            "Name" : {
+               "Fn::Join" : [
+                  ".",
+                  [
+                     {
+                        "Ref" : "RecordSetName"
+                     },
+                     {
+                        "Ref" : "HostedZoneName"
+                     }
+                  ]
+               ]
+            }
+         }
+      }
+   },
+   "AWSTemplateFormatVersion" : "2010-09-09",
+   "Outputs" : {
+      "RecordSet" : {
+         "Value" : {
+            "Ref" : "RecordSet"
+         },
+         "Description" : "Record Set"
+      }
+   },
+   "Description" : "Stack Route53 Record Set"
+}

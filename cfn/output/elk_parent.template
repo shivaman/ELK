@@ -1,0 +1,769 @@
+{
+   "Parameters" : {
+      "KibanaDashboardUser" : {
+         "Type" : "String",
+         "Default" : "kibanadash",
+         "ConstraintDescription" : "must be a valid user",
+         "Description" : "Kibana Dashboard User"
+      },
+      "EsMinInstances" : {
+         "MaxValue" : 4,
+         "Type" : "Number",
+         "Default" : 2,
+         "MinValue" : 1,
+         "ConstraintDescription" : "must be between 1 and 4.",
+         "Description" : "Minimum number of Elasticsearch instances"
+      },
+      "PubSubnetAz2" : {
+         "Type" : "String",
+         "AllowedPattern" : "subnet-[a-zA-Z0-9]{8}",
+         "Description" : "Public Subnet within AZ 2 to deploy Kibana ELB"
+      },
+      "LsArchiveUri" : {
+         "Type" : "String",
+         "ConstraintDescription" : "must be a valid S3 bucket name",
+         "Description" : "Stack Archive URI"
+      },
+      "LsPrimaryVolumeSize" : {
+         "MaxValue" : 1000,
+         "Type" : "Number",
+         "Default" : 50,
+         "MinValue" : 1,
+         "ConstraintDescription" : "must be between 1 and 750.",
+         "Description" : "Logstash Size in Gb"
+      },
+      "KibanaHealthCheckPort" : {
+         "MaxValue" : 65535,
+         "Type" : "Number",
+         "Default" : 80,
+         "MinValue" : 1,
+         "ConstraintDescription" : "must be between 1 and 65535.",
+         "Description" : "Kibana Elb Health Check Port"
+      },
+      "KibanaSubdomain" : {
+         "Type" : "String",
+         "Default" : "kibana",
+         "ConstraintDescription" : "must be a valid subdomain",
+         "Description" : "Kibana subdomain"
+      },
+      "EsHealthCheckPort" : {
+         "MaxValue" : 65535,
+         "Type" : "Number",
+         "Default" : 9200,
+         "MinValue" : 1,
+         "ConstraintDescription" : "must be between 1 and 65535.",
+         "Description" : "Elb Health Check Port"
+      },
+      "EsVersion" : {
+         "Type" : "String",
+         "Default" : "1.3.2",
+         "ConstraintDescription" : "must be a valid Elasticsearch version",
+         "Description" : "Elasticsearch Version"
+      },
+      "DnsResolverOverride" : {
+         "Type" : "String",
+         "Default" : "",
+         "Description" : "Comma-delimited list of one or more DNS resolver IP's"
+      },
+      "EsRepositoryBucket" : {
+         "Type" : "String",
+         "ConstraintDescription" : "must be a valid S3 bucket name",
+         "Description" : "Repository bucket"
+      },
+      "VpcId" : {
+         "Type" : "String",
+         "AllowedPattern" : "vpc-[a-zA-Z0-9]{8}",
+         "Description" : "VPC to deploy network resource into"
+      },
+      "EsMaxInstances" : {
+         "MaxValue" : 8,
+         "Type" : "Number",
+         "Default" : 2,
+         "MinValue" : 1,
+         "ConstraintDescription" : "must be between 1 and 8.",
+         "Description" : "Maximum number of Elasticsearch instances"
+      },
+      "KeyName" : {
+         "Type" : "String",
+         "Description" : "Name of an existing EC2 KeyPair to enable SSH access to the instances"
+      },
+      "LsMinInstances" : {
+         "MaxValue" : 4,
+         "Type" : "Number",
+         "Default" : 2,
+         "MinValue" : 1,
+         "ConstraintDescription" : "must be between 1 and 4.",
+         "Description" : "Minimum number of Logstash instances"
+      },
+      "EsCloudAwsVersion" : {
+         "Type" : "String",
+         "Default" : "2.3.0",
+         "ConstraintDescription" : "must be a valid Elasticsearch Cloud AWS plugin version",
+         "Description" : "Elasticsearch Cloud AWS plugin Version"
+      },
+      "EsClusterName" : {
+         "Type" : "String",
+         "ConstraintDescription" : "must be a valid Elasticsearch cluster name",
+         "Description" : "Elasticsearch cluster name"
+      },
+      "KibanaMaxInstances" : {
+         "MaxValue" : 8,
+         "Type" : "Number",
+         "Default" : 1,
+         "MinValue" : 1,
+         "ConstraintDescription" : "must be between 1 and 8.",
+         "Description" : "Maximum number of Kibana instances"
+      },
+      "PubSubnetAz1" : {
+         "Type" : "String",
+         "AllowedPattern" : "subnet-[a-zA-Z0-9]{8}",
+         "Description" : "Public Subnet within AZ 1 to deploy Kibana ELB"
+      },
+      "Owner" : {
+         "Type" : "String",
+         "ConstraintDescription" : "must be a valid email address",
+         "Description" : "Stack owner"
+      },
+      "KibanaEC2InstanceType" : {
+         "AllowedValues" : [
+            "t1.micro",
+            "t2.micro",
+            "t2.small",
+            "t2.medium",
+            "m1.small",
+            "m1.medium",
+            "m1.large",
+            "m1.xlarge",
+            "m3.medium",
+            "m3.large",
+            "m3.xlarge",
+            "m3.2xlarge",
+            "c3.large",
+            "c3.xlarge",
+            "c3.2xlarge",
+            "c3.4xlarge",
+            "c3.8xlarge"
+         ],
+         "Type" : "String",
+         "Default" : "t2.medium",
+         "ConstraintDescription" : "must be a valid EC2 instance type",
+         "Description" : "Kibana EC2 instance type"
+      },
+      "HostedZoneName" : {
+         "Type" : "String",
+         "ConstraintDescription" : "must be a valid zonename",
+         "Description" : "Service hosted zone name"
+      },
+      "SubnetAz1" : {
+         "Type" : "String",
+         "AllowedPattern" : "subnet-[a-zA-Z0-9]{8}",
+         "Description" : "Private Subnet within AZ 1 to deploy instances"
+      },
+      "LsSubdomain" : {
+         "Type" : "String",
+         "Default" : "ls",
+         "ConstraintDescription" : "must be a valid subdomain",
+         "Description" : "Logstash subdomain"
+      },
+      "EsEC2InstanceType" : {
+         "AllowedValues" : [
+            "t1.micro",
+            "t2.micro",
+            "t2.small",
+            "t2.medium",
+            "m1.small",
+            "m1.medium",
+            "m1.large",
+            "m1.xlarge",
+            "m3.medium",
+            "m3.large",
+            "m3.xlarge",
+            "m3.2xlarge",
+            "c3.large",
+            "c3.xlarge",
+            "c3.2xlarge",
+            "c3.4xlarge",
+            "c3.8xlarge"
+         ],
+         "Type" : "String",
+         "Default" : "t2.medium",
+         "ConstraintDescription" : "must be a valid EC2 instance type",
+         "Description" : "Elasticseach EC2 instance type"
+      },
+      "EsPrimaryVolumeSize" : {
+         "MaxValue" : 1000,
+         "Type" : "Number",
+         "Default" : 50,
+         "MinValue" : 1,
+         "ConstraintDescription" : "must be between 1 and 750.",
+         "Description" : "Elasticsearch Primary Volume Size in Gb"
+      },
+      "EsHealthCheckUri" : {
+         "Type" : "String",
+         "Default" : "/_cluster/health",
+         "ConstraintDescription" : "must be a valid URI",
+         "Description" : "Elb Health Check Uri"
+      },
+      "EnvironmentName" : {
+         "Type" : "String",
+         "ConstraintDescription" : "must be a valid environment name",
+         "Description" : "Name applied to all resources within the stack"
+      },
+      "KibanaDashboardPassword" : {
+         "Type" : "String",
+         "Default" : "Passw0rd1",
+         "ConstraintDescription" : "must contain only alphanumeric characters.",
+         "AllowedPattern" : "[a-zA-Z0-9]*",
+         "NoEcho" : "true",
+         "Description" : "Kibana Dashboard Password"
+      },
+      "StackType" : {
+         "Type" : "String",
+         "ConstraintDescription" : "must be a valid stack type",
+         "Description" : "Stack type"
+      },
+      "KibanaVersion" : {
+         "Type" : "String",
+         "Default" : "3.1.0",
+         "ConstraintDescription" : "must be a valid Kibana version",
+         "Description" : "Kibana Version"
+      },
+      "SubnetAz2" : {
+         "Type" : "String",
+         "AllowedPattern" : "subnet-[a-zA-Z0-9]{8}",
+         "Description" : "Private Subnet within AZ 2 to deploy instances"
+      },
+      "KibanaMinInstances" : {
+         "MaxValue" : 4,
+         "Type" : "Number",
+         "Default" : 1,
+         "MinValue" : 1,
+         "ConstraintDescription" : "must be between 1 and 4.",
+         "Description" : "Minimum number of Kibana instances"
+      },
+      "NestedTemplateBaseUrl" : {
+         "Type" : "String",
+         "Description" : "Base URL to include nested templates from"
+      },
+      "InternalHostedZoneName" : {
+         "Type" : "String",
+         "ConstraintDescription" : "must be a valid zonename",
+         "Description" : "Service internal hosted zone name"
+      },
+      "ResourceBucket" : {
+         "Type" : "String",
+         "ConstraintDescription" : "must be a valid S3 bucket name",
+         "Description" : "Resource bucket"
+      },
+      "EsSubdomain" : {
+         "Type" : "String",
+         "Default" : "es",
+         "ConstraintDescription" : "must be a valid subdomain",
+         "Description" : "Elasticsearch subdomain"
+      },
+      "LsMaxInstances" : {
+         "MaxValue" : 8,
+         "Type" : "Number",
+         "Default" : 2,
+         "MinValue" : 1,
+         "ConstraintDescription" : "must be between 1 and 8.",
+         "Description" : "Maximum number of Logstash instances"
+      },
+      "KibanaPrimaryVolumeSize" : {
+         "MaxValue" : 1000,
+         "Type" : "Number",
+         "Default" : 50,
+         "MinValue" : 1,
+         "ConstraintDescription" : "must be between 1 and 750.",
+         "Description" : "Kibana Size in Gb"
+      },
+      "LsEC2InstanceType" : {
+         "AllowedValues" : [
+            "t1.micro",
+            "t2.micro",
+            "t2.small",
+            "t2.medium",
+            "m1.small",
+            "m1.medium",
+            "m1.large",
+            "m1.xlarge",
+            "m3.medium",
+            "m3.large",
+            "m3.xlarge",
+            "m3.2xlarge",
+            "c3.large",
+            "c3.xlarge",
+            "c3.2xlarge",
+            "c3.4xlarge",
+            "c3.8xlarge"
+         ],
+         "Type" : "String",
+         "Default" : "t2.medium",
+         "ConstraintDescription" : "must be a valid EC2 instance type",
+         "Description" : "Logstash EC2 instance type"
+      },
+      "KibanaHealthCheckUri" : {
+         "Type" : "String",
+         "Default" : "/",
+         "ConstraintDescription" : "must be a valid URI",
+         "Description" : "Kibana Elb Health Check Uri"
+      },
+      "Project" : {
+         "Type" : "String",
+         "Description" : "Project name"
+      }
+   },
+   "Resources" : {
+      "KibanaR53Stack" : {
+         "DependsOn" : [
+            "KibanaStack"
+         ],
+         "Type" : "AWS::CloudFormation::Stack",
+         "Properties" : {
+            "Parameters" : {
+               "Owner" : {
+                  "Ref" : "Owner"
+               },
+               "RecordSetName" : {
+                  "Ref" : "KibanaSubdomain"
+               },
+               "HostedZoneName" : {
+                  "Ref" : "HostedZoneName"
+               },
+               "ResourceRecordValue" : {
+                  "Fn::Join" : [
+                     "",
+                     [
+                        {
+                           "Fn::GetAtt" : [
+                              "KibanaStack",
+                              "Outputs.LoadBalancerHostname"
+                           ]
+                        },
+                        "."
+                     ]
+                  ]
+               },
+               "RecordSetType" : "CNAME"
+            },
+            "TemplateURL" : {
+               "Fn::Join" : [
+                  "",
+                  [
+                     {
+                        "Ref" : "NestedTemplateBaseUrl"
+                     },
+                     "r53_record_set.template"
+                  ]
+               ]
+            },
+            "TimeoutInMinutes" : 300
+         }
+      },
+      "EsStack" : {
+         "Type" : "AWS::CloudFormation::Stack",
+         "Properties" : {
+            "Parameters" : {
+               "EnvironmentName" : {
+                  "Fn::Join" : [
+                     "-",
+                     [
+                        {
+                           "Ref" : "EnvironmentName"
+                        },
+                        "Elasticsearch"
+                     ]
+                  ]
+               },
+               "StackType" : "es",
+               "DnsResolverOverride" : {
+                  "Ref" : "DnsResolverOverride"
+               },
+               "SubnetAz2" : {
+                  "Ref" : "SubnetAz2"
+               },
+               "EsVersion" : {
+                  "Ref" : "EsVersion"
+               },
+               "HealthCheckPort" : {
+                  "Ref" : "EsHealthCheckPort"
+               },
+               "VpcId" : {
+                  "Ref" : "VpcId"
+               },
+               "EsRepositoryBucket" : {
+                  "Ref" : "EsRepositoryBucket"
+               },
+               "KeyName" : {
+                  "Ref" : "KeyName"
+               },
+               "EsCloudAwsVersion" : {
+                  "Ref" : "EsCloudAwsVersion"
+               },
+               "EsClusterName" : {
+                  "Ref" : "EsClusterName"
+               },
+               "Owner" : {
+                  "Ref" : "Owner"
+               },
+               "MaxInstances" : {
+                  "Ref" : "EsMaxInstances"
+               },
+               "HealthCheckUri" : {
+                  "Ref" : "EsHealthCheckUri"
+               },
+               "SubnetAz1" : {
+                  "Ref" : "SubnetAz1"
+               },
+               "MinInstances" : {
+                  "Ref" : "EsMinInstances"
+               },
+               "EC2InstanceType" : {
+                  "Ref" : "EsEC2InstanceType"
+               },
+               "Project" : {
+                  "Ref" : "Project"
+               },
+               "PrimaryVolumeSize" : {
+                  "Ref" : "EsPrimaryVolumeSize"
+               }
+            },
+            "TemplateURL" : {
+               "Fn::Join" : [
+                  "",
+                  [
+                     {
+                        "Ref" : "NestedTemplateBaseUrl"
+                     },
+                     "elasticsearch_stack.template"
+                  ]
+               ]
+            },
+            "TimeoutInMinutes" : 300
+         }
+      },
+      "LsR53Stack" : {
+         "DependsOn" : [
+            "LsStack"
+         ],
+         "Type" : "AWS::CloudFormation::Stack",
+         "Properties" : {
+            "Parameters" : {
+               "Owner" : {
+                  "Ref" : "Owner"
+               },
+               "RecordSetName" : {
+                  "Ref" : "LsSubdomain"
+               },
+               "HostedZoneName" : {
+                  "Ref" : "InternalHostedZoneName"
+               },
+               "ResourceRecordValue" : {
+                  "Fn::Join" : [
+                     "",
+                     [
+                        {
+                           "Fn::GetAtt" : [
+                              "LsStack",
+                              "Outputs.LoadBalancerHostname"
+                           ]
+                        },
+                        "."
+                     ]
+                  ]
+               },
+               "RecordSetType" : "CNAME"
+            },
+            "TemplateURL" : {
+               "Fn::Join" : [
+                  "",
+                  [
+                     {
+                        "Ref" : "NestedTemplateBaseUrl"
+                     },
+                     "r53_record_set.template"
+                  ]
+               ]
+            },
+            "TimeoutInMinutes" : 300
+         }
+      },
+      "EsR53Stack" : {
+         "DependsOn" : [
+            "EsStack"
+         ],
+         "Type" : "AWS::CloudFormation::Stack",
+         "Properties" : {
+            "Parameters" : {
+               "Owner" : {
+                  "Ref" : "Owner"
+               },
+               "RecordSetName" : {
+                  "Ref" : "EsSubdomain"
+               },
+               "HostedZoneName" : {
+                  "Ref" : "InternalHostedZoneName"
+               },
+               "ResourceRecordValue" : {
+                  "Fn::Join" : [
+                     "",
+                     [
+                        {
+                           "Fn::GetAtt" : [
+                              "EsStack",
+                              "Outputs.LoadBalancerHostname"
+                           ]
+                        },
+                        "."
+                     ]
+                  ]
+               },
+               "RecordSetType" : "CNAME"
+            },
+            "TemplateURL" : {
+               "Fn::Join" : [
+                  "",
+                  [
+                     {
+                        "Ref" : "NestedTemplateBaseUrl"
+                     },
+                     "r53_record_set.template"
+                  ]
+               ]
+            },
+            "TimeoutInMinutes" : 300
+         }
+      },
+      "KibanaStack" : {
+         "DependsOn" : [
+            "LsStack"
+         ],
+         "Type" : "AWS::CloudFormation::Stack",
+         "Properties" : {
+            "Parameters" : {
+               "KibanaDashboardUser" : {
+                  "Ref" : "KibanaDashboardUser"
+               },
+               "PubSubnetAz2" : {
+                  "Ref" : "PubSubnetAz2"
+               },
+               "EnvironmentName" : {
+                  "Fn::Join" : [
+                     "-",
+                     [
+                        {
+                           "Ref" : "EnvironmentName"
+                        },
+                        "Kibana"
+                     ]
+                  ]
+               },
+               "KibanaDashboardPassword" : {
+                  "Ref" : "KibanaDashboardPassword"
+               },
+               "StackType" : "kibana",
+               "DnsResolverOverride" : {
+                  "Ref" : "DnsResolverOverride"
+               },
+               "SubnetAz2" : {
+                  "Ref" : "SubnetAz2"
+               },
+               "KibanaVersion" : {
+                  "Ref" : "KibanaVersion"
+               },
+               "HealthCheckPort" : {
+                  "Ref" : "KibanaHealthCheckPort"
+               },
+               "VpcId" : {
+                  "Ref" : "VpcId"
+               },
+               "KeyName" : {
+                  "Ref" : "KeyName"
+               },
+               "KibanaHostname" : {
+                  "Fn::Join" : [
+                     ".",
+                     [
+                        {
+                           "Ref" : "KibanaSubdomain"
+                        },
+                        {
+                           "Ref" : "HostedZoneName"
+                        }
+                     ]
+                  ]
+               },
+               "EsHostname" : {
+                  "Fn::Join" : [
+                     ".",
+                     [
+                        {
+                           "Ref" : "EsSubdomain"
+                        },
+                        {
+                           "Ref" : "InternalHostedZoneName"
+                        }
+                     ]
+                  ]
+               },
+               "PubSubnetAz1" : {
+                  "Ref" : "PubSubnetAz1"
+               },
+               "Owner" : {
+                  "Ref" : "Owner"
+               },
+               "HealthCheckUri" : {
+                  "Ref" : "KibanaHealthCheckUri"
+               },
+               "MaxInstances" : {
+                  "Ref" : "KibanaMaxInstances"
+               },
+               "MinInstances" : {
+                  "Ref" : "KibanaMinInstances"
+               },
+               "SubnetAz1" : {
+                  "Ref" : "SubnetAz1"
+               },
+               "EC2InstanceType" : {
+                  "Ref" : "KibanaEC2InstanceType"
+               },
+               "Project" : {
+                  "Ref" : "Project"
+               },
+               "PrimaryVolumeSize" : {
+                  "Ref" : "KibanaPrimaryVolumeSize"
+               }
+            },
+            "TemplateURL" : {
+               "Fn::Join" : [
+                  "",
+                  [
+                     {
+                        "Ref" : "NestedTemplateBaseUrl"
+                     },
+                     "kibana_stack.template"
+                  ]
+               ]
+            },
+            "TimeoutInMinutes" : 300
+         }
+      },
+      "LsStack" : {
+         "DependsOn" : [
+            "EsStack"
+         ],
+         "Type" : "AWS::CloudFormation::Stack",
+         "Properties" : {
+            "Parameters" : {
+               "EnvironmentName" : {
+                  "Fn::Join" : [
+                     "-",
+                     [
+                        {
+                           "Ref" : "EnvironmentName"
+                        },
+                        "Logstash"
+                     ]
+                  ]
+               },
+               "StackType" : "lsa",
+               "DnsResolverOverride" : {
+                  "Ref" : "DnsResolverOverride"
+               },
+               "SubnetAz2" : {
+                  "Ref" : "SubnetAz2"
+               },
+               "VpcId" : {
+                  "Ref" : "VpcId"
+               },
+               "KeyName" : {
+                  "Ref" : "KeyName"
+               },
+               "ArchiveUri" : {
+                  "Ref" : "LsArchiveUri"
+               },
+               "ResourceBucket" : {
+                  "Ref" : "ResourceBucket"
+               },
+               "EsHostname" : {
+                  "Fn::Join" : [
+                     ".",
+                     [
+                        {
+                           "Ref" : "EsSubdomain"
+                        },
+                        {
+                           "Ref" : "InternalHostedZoneName"
+                        }
+                     ]
+                  ]
+               },
+               "Owner" : {
+                  "Ref" : "Owner"
+               },
+               "MaxInstances" : {
+                  "Ref" : "LsMaxInstances"
+               },
+               "SubnetAz1" : {
+                  "Ref" : "SubnetAz1"
+               },
+               "MinInstances" : {
+                  "Ref" : "LsMinInstances"
+               },
+               "EC2InstanceType" : {
+                  "Ref" : "LsEC2InstanceType"
+               },
+               "Project" : {
+                  "Ref" : "Project"
+               },
+               "PrimaryVolumeSize" : {
+                  "Ref" : "LsPrimaryVolumeSize"
+               }
+            },
+            "TemplateURL" : {
+               "Fn::Join" : [
+                  "",
+                  [
+                     {
+                        "Ref" : "NestedTemplateBaseUrl"
+                     },
+                     "logstash_stack.template"
+                  ]
+               ]
+            },
+            "TimeoutInMinutes" : 300
+         }
+      }
+   },
+   "AWSTemplateFormatVersion" : "2010-09-09",
+   "Outputs" : {
+      "KibanaEndpoint" : {
+         "Value" : {
+            "Fn::GetAtt" : [
+               "KibanaR53Stack",
+               "Outputs.RecordSet"
+            ]
+         },
+         "Description" : "Kibana Endpoint"
+      },
+      "LsEndpoint" : {
+         "Value" : {
+            "Fn::GetAtt" : [
+               "LsR53Stack",
+               "Outputs.RecordSet"
+            ]
+         },
+         "Description" : "Logstash Endpoint"
+      },
+      "EsEndpoint" : {
+         "Value" : {
+            "Fn::GetAtt" : [
+               "EsR53Stack",
+               "Outputs.RecordSet"
+            ]
+         },
+         "Description" : "Elasticsearch Endpoint"
+      }
+   },
+   "Description" : "Linux ELK Parent Template"
+}

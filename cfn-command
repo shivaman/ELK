@@ -1,0 +1,39 @@
+STACK_NAME="ELK-01"
+# create runtime stack
+aws cloudformation create-stack --disable-rollback --stack-name ${STACK_NAME} --template-body file://./cfn/output/elk_parent.template --output table \
+--parameters ParameterKey=KeyName,ParameterValue=shivaIAMUser \
+ParameterKey=NestedTemplateBaseUrl,ParameterValue=https://shivacfn.s3.amazonaws.com/elk/ \
+ParameterKey=EnvironmentName,ParameterValue=${STACK_NAME} \
+ParameterKey=Owner,ParameterValue=narshiva@amazon.com \
+ParameterKey=StackType,ParameterValue=elk \
+ParameterKey=Project,ParameterValue="ELK Accelerate" \
+ParameterKey=VpcId,ParameterValue=vpc-a343b3c6 \
+ParameterKey=SubnetAz1,ParameterValue="subnet-6c89631b" \
+ParameterKey=SubnetAz2,ParameterValue="subnet-bd18d5d8" \
+ParameterKey=PubSubnetAz1,ParameterValue="subnet-6b89631c" \
+ParameterKey=PubSubnetAz2,ParameterValue="subnet-b218d5d7" \
+ParameterKey=HostedZoneName,ParameterValue=shivaman.com \
+ParameterKey=InternalHostedZoneName,ParameterValue=dune.com \
+ParameterKey=ResourceBucket,ParameterValue=shivacfn \
+ParameterKey=EsRepositoryBucket,ParameterValue=shivaelk-esrepository \
+ParameterKey=EsEC2InstanceType,ParameterValue=t2.medium \
+ParameterKey=EsPrimaryVolumeSize,ParameterValue=20 \
+ParameterKey=EsHealthCheckUri,ParameterValue=/_cluster/health \
+ParameterKey=EsHealthCheckPort,ParameterValue=9200 \
+ParameterKey=EsClusterName,ParameterValue=es-shivaman \
+ParameterKey=EsSubdomain,ParameterValue=es \
+ParameterKey=EsMinInstances,ParameterValue=2 \
+ParameterKey=EsMaxInstances,ParameterValue=2 \
+ParameterKey=LsEC2InstanceType,ParameterValue=t2.medium \
+ParameterKey=LsPrimaryVolumeSize,ParameterValue=20 \
+ParameterKey=LsSubdomain,ParameterValue=ls \
+ParameterKey=LsMinInstances,ParameterValue=2 \
+ParameterKey=LsMaxInstances,ParameterValue=2 \
+ParameterKey=LsArchiveUri,ParameterValue=elk/data \
+ParameterKey=KibanaEC2InstanceType,ParameterValue=t2.medium \
+ParameterKey=KibanaPrimaryVolumeSize,ParameterValue=20 \
+ParameterKey=KibanaSubdomain,ParameterValue=kibana \
+ParameterKey=KibanaMinInstances,ParameterValue=1 \
+ParameterKey=KibanaMaxInstances,ParameterValue=1 \
+ParameterKey=KibanaDashboardUser,ParameterValue=kibanadash \
+ParameterKey=KibanaDashboardPassword,ParameterValue=Passw0rd123

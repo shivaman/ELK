@@ -1,0 +1,945 @@
+{
+   "Parameters" : {
+      "KibanaDashboardUser" : {
+         "Type" : "String",
+         "ConstraintDescription" : "must be a valid user",
+         "Description" : "Kibana Dashboard User"
+      },
+      "PubSubnetAz2" : {
+         "Type" : "String",
+         "AllowedPattern" : "subnet-[a-zA-Z0-9]{8}",
+         "Description" : "Public Subnet within AZ 2 to deploy Kibana ELB"
+      },
+      "EnvironmentName" : {
+         "Type" : "String",
+         "ConstraintDescription" : "must be a valid environment name",
+         "Description" : "Name applied to all resources within the stack"
+      },
+      "KibanaDashboardPassword" : {
+         "Type" : "String",
+         "ConstraintDescription" : "must contain only alphanumeric characters.",
+         "AllowedPattern" : "[a-zA-Z0-9]*",
+         "NoEcho" : "true",
+         "Description" : "Kibana Hostname"
+      },
+      "StackType" : {
+         "Type" : "String",
+         "Default" : "Kibana Cluster",
+         "ConstraintDescription" : "must be a valid stack type",
+         "Description" : "Stack type"
+      },
+      "DnsResolverOverride" : {
+         "Type" : "String",
+         "Default" : "",
+         "Description" : "Comma-delimited list of one or more DNS resolver IP's"
+      },
+      "SubnetAz2" : {
+         "Type" : "String",
+         "AllowedPattern" : "subnet-[a-zA-Z0-9]{8}",
+         "Description" : "Private Subnet within AZ 2 to deploy instances"
+      },
+      "KibanaVersion" : {
+         "Type" : "String",
+         "Default" : "3.1.0",
+         "ConstraintDescription" : "must be a valid Kibana version",
+         "Description" : "Kibana Version"
+      },
+      "HealthCheckPort" : {
+         "MaxValue" : 65535,
+         "Type" : "Number",
+         "Default" : 80,
+         "MinValue" : 1,
+         "ConstraintDescription" : "must be between 1 and 65535.",
+         "Description" : "Elb Health Check Port"
+      },
+      "VpcId" : {
+         "Type" : "String",
+         "AllowedPattern" : "vpc-[a-zA-Z0-9]{8}",
+         "Description" : "VPC to deploy network resource into"
+      },
+      "KeyName" : {
+         "Type" : "String",
+         "Description" : "Name of an existing EC2 KeyPair to enable SSH access to the instances"
+      },
+      "KibanaHostname" : {
+         "Type" : "String",
+         "ConstraintDescription" : "must be a valid hostname",
+         "Description" : "Kibana Hostname"
+      },
+      "EsHostname" : {
+         "Type" : "String",
+         "ConstraintDescription" : "must be a valid hostname",
+         "Description" : "Elasticsearch Hostname"
+      },
+      "PubSubnetAz1" : {
+         "Type" : "String",
+         "AllowedPattern" : "subnet-[a-zA-Z0-9]{8}",
+         "Description" : "Public Subnet within AZ 1 to deploy Kibana ELB"
+      },
+      "Owner" : {
+         "Type" : "String",
+         "ConstraintDescription" : "must be a valid email address",
+         "Description" : "Stack owner"
+      },
+      "HealthCheckUri" : {
+         "Type" : "String",
+         "Default" : "/",
+         "ConstraintDescription" : "must be a valid URI",
+         "Description" : "Elb Health Check Uri"
+      },
+      "MaxInstances" : {
+         "MaxValue" : 8,
+         "Type" : "Number",
+         "Default" : 2,
+         "MinValue" : 1,
+         "ConstraintDescription" : "must be between 1 and 8.",
+         "Description" : "Maximum number of Kibana instances"
+      },
+      "MinInstances" : {
+         "MaxValue" : 4,
+         "Type" : "Number",
+         "Default" : 2,
+         "MinValue" : 1,
+         "ConstraintDescription" : "must be between 1 and 4.",
+         "Description" : "Minimum number of Kibana instances"
+      },
+      "SubnetAz1" : {
+         "Type" : "String",
+         "AllowedPattern" : "subnet-[a-zA-Z0-9]{8}",
+         "Description" : "Private Subnet within AZ 1 to deploy instances"
+      },
+      "EC2InstanceType" : {
+         "AllowedValues" : [
+            "t1.micro",
+            "t2.micro",
+            "t2.small",
+            "t2.medium",
+            "m1.small",
+            "m1.medium",
+            "m1.large",
+            "m1.xlarge",
+            "m3.medium",
+            "m3.large",
+            "m3.xlarge",
+            "m3.2xlarge",
+            "c3.large",
+            "c3.xlarge",
+            "c3.2xlarge",
+            "c3.4xlarge",
+            "c3.8xlarge"
+         ],
+         "Type" : "String",
+         "Default" : "t2.medium",
+         "ConstraintDescription" : "must be a valid EC2 instance type",
+         "Description" : "EC2 instance type"
+      },
+      "Project" : {
+         "Type" : "String",
+         "Description" : "Project name"
+      },
+      "PrimaryVolumeSize" : {
+         "MaxValue" : 1000,
+         "Type" : "Number",
+         "Default" : 50,
+         "MinValue" : 1,
+         "ConstraintDescription" : "must be between 1 and 750.",
+         "Description" : "Primary Volume Size in Gb"
+      }
+   },
+   "Resources" : {
+      "EsCPUAlarmHigh" : {
+         "DependsOn" : [
+            "EsScaleUpPolicy"
+         ],
+         "Type" : "AWS::CloudWatch::Alarm",
+         "Properties" : {
+            "Dimensions" : [
+               {
+                  "Value" : {
+                     "Ref" : "AutoScalingGroup"
+                  },
+                  "Name" : "AutoScalingGroupName"
+               }
+            ],
+            "EvaluationPeriods" : 5,
+            "AlarmActions" : [
+               {
+                  "Ref" : "EsScaleUpPolicy"
+               }
+            ],
+            "Period" : 60,
+            "ComparisonOperator" : "GreaterThanThreshold",
+            "Statistic" : "Average",
+            "Namespace" : "AWS/EC2",
+            "AlarmDescription" : "Scale-up if CPU > 65% for 5 minutes",
+            "Threshold" : 65,
+            "MetricName" : "CPUUtilization"
+         }
+      },
+      "ExternalElbAnyKibana" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+            "ToPort" : 80,
+            "GroupId" : {
+               "Ref" : "ExternalKibanaElbSg"
+            },
+            "FromPort" : 80,
+            "IpProtocol" : "tcp",
+            "CidrIp" : "0.0.0.0/0"
+         }
+      },
+      "LaunchConfig" : {
+         "DependsOn" : [
+            "InstanceProfile"
+         ],
+         "Type" : "AWS::AutoScaling::LaunchConfiguration",
+         "Properties" : {
+            "KeyName" : {
+               "Ref" : "KeyName"
+            },
+            "ImageId" : {
+               "Fn::FindInMap" : [
+                  "AWSEC2RegionArch2AMI",
+                  {
+                     "Ref" : "AWS::Region"
+                  },
+                  {
+                     "Fn::FindInMap" : [
+                        "AWSEC2InstanceType2Arch",
+                        {
+                           "Ref" : "EC2InstanceType"
+                        },
+                        "Arch"
+                     ]
+                  }
+               ]
+            },
+            "InstanceType" : {
+               "Ref" : "EC2InstanceType"
+            },
+            "BlockDeviceMappings" : [
+               {
+                  "Ebs" : {
+                     "VolumeSize" : {
+                        "Ref" : "PrimaryVolumeSize"
+                     },
+                     "DeleteOnTermination" : "true",
+                     "VolumeType" : "gp2"
+                  },
+                  "DeviceName" : "/dev/xvda"
+               }
+            ],
+            "UserData" : {
+               "Fn::Base64" : {
+                  "Fn::Join" : [
+                     "",
+                     [
+                        "#!/bin/bash -v \n",
+                        "yum update -y\n",
+                        "# Helper function\n",
+                        "function error_exit\n",
+                        "{\n",
+                        "  /opt/aws/bin/cfn-signal -e 1 -r \"$1\" '",
+                        {
+                           "Ref" : "WaitHandle"
+                        },
+                        "'\n",
+                        "  exit 1\n",
+                        "}\n",
+                        "# CloudFormation init start\n",
+                        "/opt/aws/bin/cfn-init -v -c default -s ",
+                        {
+                           "Ref" : "AWS::StackId"
+                        },
+                        " -r LaunchConfig --region ",
+                        {
+                           "Ref" : "AWS::Region"
+                        },
+                        "\n",
+                        "# Determine if nginx installed successfully\n",
+                        "if [[ ! -e /usr/sbin/nginx ]]; then\n",
+                        "  error_exit \"nginx failed to install successfully\"\n",
+                        "fi\n",
+                        "# Determine if the kibana configuration was successful\n",
+                        "$(grep -q ",
+                        {
+                           "Ref" : "EsHostname"
+                        },
+                        " /etc/nginx/conf.d/kibana.conf)\n",
+                        "if [[ $? != 0 ]]; then\n",
+                        "        error_exit \"kibana configuration failed\"\n",
+                        "fi\n",
+                        "# Determine if nginx started successfully\n",
+                        "$(ps cax |grep -q nginx)\n",
+                        "if [[ $? != 0 ]]; then\n",
+                        "        error_exit \"nginx failed to start\"\n",
+                        "fi\n",
+                        "## CloudFormation signal that setup is complete\n",
+                        "/opt/aws/bin/cfn-signal -e 0 -r \"Kibana setup complete\" '",
+                        {
+                           "Ref" : "WaitHandle"
+                        },
+                        "'\n"
+                     ]
+                  ]
+               }
+            },
+            "IamInstanceProfile" : {
+               "Ref" : "InstanceProfile"
+            },
+            "SecurityGroups" : [
+               {
+                  "Ref" : "LinuxKibanaSg"
+               }
+            ]
+         },
+         "Metadata" : {
+            "AWS::CloudFormation::Init" : {
+               "configureNginx" : {
+                  "commands" : {
+                     "3-updateEsHostname" : {
+                        "command" : {
+                           "Fn::Join" : [
+                              "",
+                              [
+                                 "sed -i -e 's/127\\.0\\.0\\.1/",
+                                 {
+                                    "Ref" : "EsHostname"
+                                 },
+                                 "/g' /etc/nginx/conf.d/kibana.conf"
+                              ]
+                           ]
+                        }
+                     },
+                     "2-renameConfig" : {
+                        "command" : {
+                           "Fn::Join" : [
+                              "",
+                              [
+                                 "cd /etc/nginx/conf.d && mv nginx.conf kibana.conf"
+                              ]
+                           ]
+                        }
+                     },
+                     "1-downloadConfig" : {
+                        "command" : {
+                           "Fn::Join" : [
+                              "",
+                              [
+                                 "cd /etc/nginx/conf.d && wget https://raw.githubusercontent.com/elasticsearch/kibana/kibana3/sample/nginx.conf"
+                              ]
+                           ]
+                        }
+                     },
+                     "5-createAuthFile" : {
+                        "command" : {
+                           "Fn::Join" : [
+                              "",
+                              [
+                                 "htpasswd -b -c /etc/nginx/conf.d/",
+                                 {
+                                    "Ref" : "KibanaHostname"
+                                 },
+                                 ".htpasswd ",
+                                 {
+                                    "Ref" : "KibanaDashboardUser"
+                                 },
+                                 " ",
+                                 {
+                                    "Ref" : "KibanaDashboardPassword"
+                                 }
+                              ]
+                           ]
+                        }
+                     },
+                     "4-updateKibanaHostname" : {
+                        "command" : {
+                           "Fn::Join" : [
+                              "",
+                              [
+                                 "sed -i -e 's/kibana\\.myhost\\.org/",
+                                 {
+                                    "Ref" : "KibanaHostname"
+                                 },
+                                 "/g' /etc/nginx/conf.d/kibana.conf"
+                              ]
+                           ]
+                        }
+                     }
+                  }
+               },
+               "dnsOverride" : {
+                  "commands" : {
+                     "overrideDns" : {
+                        "command" : {
+                           "Fn::Join" : [
+                              "",
+                              [
+                                 "DnsResolverOverride=\"",
+                                 {
+                                    "Ref" : "DnsResolverOverride"
+                                 },
+                                 "\"\n",
+                                 "if [[ -n ${DnsResolverOverride} ]]; then\n",
+                                 " sed -i 's/^PEERDNS.*/PEERDNS=no/g' /etc/sysconfig/network-scripts/ifcfg-eth0\n",
+                                 " sed -i '/^nameserver/ d' /etc/resolv.conf\n",
+                                 "\n",
+                                 "DnsResolverList=$(echo ${DnsResolverOverride} | sed s/,/\\\n/g)\n",
+                                 "for resolver in $(echo ${DnsResolverList}); do\n",
+                                 " echo \"nameserver $resolver\" >> /etc/resolv.conf\n",
+                                 "done\n",
+                                 "fi\n"
+                              ]
+                           ]
+                        }
+                     }
+                  }
+               },
+               "configSets" : {
+                  "default" : [
+                     "installNginx",
+                     "installKibana",
+                     "installEsHq",
+                     "configureNginx",
+                     "dnsOverride",
+                     "runNginxAsService"
+                  ]
+               },
+               "runNginxAsService" : {
+                  "commands" : {
+                     "1-chkLsService" : {
+                        "command" : {
+                           "Fn::Join" : [
+                              "",
+                              [
+                                 "/sbin/chkconfig --level 2345 nginx on"
+                              ]
+                           ]
+                        }
+                     },
+                     "2-startLsService" : {
+                        "command" : {
+                           "Fn::Join" : [
+                              "",
+                              [
+                                 "/etc/init.d/nginx start"
+                              ]
+                           ]
+                        }
+                     }
+                  }
+               },
+               "installNginx" : {
+                  "packages" : {
+                     "yum" : {
+                        "nginx" : [],
+                        "httpd-tools" : []
+                     }
+                  },
+                  "sources" : {
+                     "/usr/share" : {
+                        "Fn::Join" : [
+                           "",
+                           [
+                              "https://download.elasticsearch.org/kibana/kibana/kibana-",
+                              {
+                                 "Ref" : "KibanaVersion"
+                              },
+                              ".zip"
+                           ]
+                        ]
+                     }
+                  }
+               },
+               "installEsHq" : {
+                  "sources" : {
+                     "/usr/share/kibana3/hq" : {
+                        "Fn::Join" : [
+                           "",
+                           [
+                              "https://github.com/royrusso/elasticsearch-HQ/zipball/master"
+                           ]
+                        ]
+                     }
+                  }
+               },
+               "installKibana" : {
+                  "sources" : {
+                     "/usr/share" : {
+                        "Fn::Join" : [
+                           "",
+                           [
+                              "https://download.elasticsearch.org/kibana/kibana/kibana-",
+                              {
+                                 "Ref" : "KibanaVersion"
+                              },
+                              ".zip"
+                           ]
+                        ]
+                     }
+                  },
+                  "commands" : {
+                     "2-configureKibana" : {
+                        "command" : {
+                           "Fn::Join" : [
+                              "",
+                              [
+                                 "cd /usr/share/kibana3 && sed -i -e 's/\\+\\\"\\:9200\\\"/\\+\\\"\\:80\\\"/g' config.js"
+                              ]
+                           ]
+                        }
+                     },
+                     "1-renameKibana" : {
+                        "command" : {
+                           "Fn::Join" : [
+                              "",
+                              [
+                                 "cd /usr/share && mv kibana-",
+                                 {
+                                    "Ref" : "KibanaVersion"
+                                 },
+                                 " kibana3"
+                              ]
+                           ]
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      },
+      "WaitHandle" : {
+         "Type" : "AWS::CloudFormation::WaitConditionHandle"
+      },
+      "ExternalElb" : {
+         "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+         "Properties" : {
+            "HealthCheck" : {
+               "Interval" : 6,
+               "Target" : {
+                  "Fn::Join" : [
+                     "",
+                     [
+                        "HTTP",
+                        ":",
+                        {
+                           "Ref" : "HealthCheckPort"
+                        },
+                        {
+                           "Ref" : "HealthCheckUri"
+                        }
+                     ]
+                  ]
+               },
+               "Timeout" : 5,
+               "UnhealthyThreshold" : 7,
+               "HealthyThreshold" : 7
+            },
+            "Subnets" : [
+               {
+                  "Ref" : "PubSubnetAz1"
+               },
+               {
+                  "Ref" : "PubSubnetAz2"
+               }
+            ],
+            "Listeners" : [
+               {
+                  "InstancePort" : "80",
+                  "Protocol" : "HTTP",
+                  "LoadBalancerPort" : "80"
+               }
+            ],
+            "ConnectionDrainingPolicy" : {
+               "Enabled" : true,
+               "Timeout" : 300
+            },
+            "CrossZone" : true,
+            "SecurityGroups" : [
+               {
+                  "Ref" : "ExternalKibanaElbSg"
+               }
+            ]
+         }
+      },
+      "EsScaleDownPolicy" : {
+         "DependsOn" : "AutoScalingGroup",
+         "Type" : "AWS::AutoScaling::ScalingPolicy",
+         "Properties" : {
+            "AdjustmentType" : "ChangeInCapacity",
+            "ScalingAdjustment" : -2,
+            "AutoScalingGroupName" : {
+               "Ref" : "AutoScalingGroup"
+            },
+            "Cooldown" : 60
+         }
+      },
+      "LinuxKibanaAnyAll" : {
+         "Type" : "AWS::EC2::SecurityGroupEgress",
+         "Properties" : {
+            "ToPort" : 65535,
+            "GroupId" : {
+               "Ref" : "LinuxKibanaSg"
+            },
+            "FromPort" : 0,
+            "IpProtocol" : "-1",
+            "CidrIp" : "0.0.0.0/0"
+         }
+      },
+      "LinuxKibanaSg" : {
+         "Type" : "AWS::EC2::SecurityGroup",
+         "Properties" : {
+            "VpcId" : {
+               "Ref" : "VpcId"
+            },
+            "GroupDescription" : "Kibana Instances Security Group"
+         }
+      },
+      "InstanceRole" : {
+         "Type" : "AWS::IAM::Role",
+         "Properties" : {
+            "AssumeRolePolicyDocument" : {
+               "Statement" : [
+                  {
+                     "Effect" : "Allow",
+                     "Action" : [
+                        "sts:AssumeRole"
+                     ],
+                     "Principal" : {
+                        "Service" : [
+                           "ec2.amazonaws.com"
+                        ]
+                     }
+                  }
+               ]
+            },
+            "Policies" : [],
+            "Path" : "/"
+         }
+      },
+      "EsCPUAlarmLow" : {
+         "DependsOn" : [
+            "EsScaleDownPolicy"
+         ],
+         "Type" : "AWS::CloudWatch::Alarm",
+         "Properties" : {
+            "Dimensions" : [
+               {
+                  "Value" : {
+                     "Ref" : "AutoScalingGroup"
+                  },
+                  "Name" : "AutoScalingGroupName"
+               }
+            ],
+            "EvaluationPeriods" : 20,
+            "AlarmActions" : [
+               {
+                  "Ref" : "EsScaleDownPolicy"
+               }
+            ],
+            "Period" : 60,
+            "ComparisonOperator" : "LessThanThreshold",
+            "Statistic" : "Average",
+            "Namespace" : "AWS/EC2",
+            "AlarmDescription" : "Scale-down if CPU < 35% for 20 minutes",
+            "Threshold" : 35,
+            "MetricName" : "CPUUtilization"
+         }
+      },
+      "WaitCondition" : {
+         "Type" : "AWS::CloudFormation::WaitCondition",
+         "Properties" : {
+            "Timeout" : 1200,
+            "Handle" : {
+               "Ref" : "WaitHandle"
+            }
+         }
+      },
+      "InstanceProfile" : {
+         "DependsOn" : "InstanceRole",
+         "Type" : "AWS::IAM::InstanceProfile",
+         "Properties" : {
+            "Roles" : [
+               {
+                  "Ref" : "InstanceRole"
+               }
+            ],
+            "Path" : "/"
+         }
+      },
+      "EsScaleUpPolicy" : {
+         "DependsOn" : "AutoScalingGroup",
+         "Type" : "AWS::AutoScaling::ScalingPolicy",
+         "Properties" : {
+            "AdjustmentType" : "ChangeInCapacity",
+            "ScalingAdjustment" : 2,
+            "AutoScalingGroupName" : {
+               "Ref" : "AutoScalingGroup"
+            },
+            "Cooldown" : 60
+         }
+      },
+      "ExternalElbLinuxKibana" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+            "ToPort" : 80,
+            "GroupId" : {
+               "Ref" : "LinuxKibanaSg"
+            },
+            "FromPort" : 80,
+            "SourceSecurityGroupId" : {
+               "Ref" : "ExternalKibanaElbSg"
+            },
+            "IpProtocol" : "tcp"
+         }
+      },
+      "ElbAnyAll" : {
+         "Type" : "AWS::EC2::SecurityGroupEgress",
+         "Properties" : {
+            "ToPort" : 65535,
+            "GroupId" : {
+               "Ref" : "ExternalKibanaElbSg"
+            },
+            "FromPort" : 0,
+            "IpProtocol" : "-1",
+            "CidrIp" : "0.0.0.0/0"
+         }
+      },
+      "AutoScalingGroup" : {
+         "DependsOn" : [
+            "LaunchConfig"
+         ],
+         "Type" : "AWS::AutoScaling::AutoScalingGroup",
+         "Properties" : {
+            "MaxSize" : {
+               "Ref" : "MaxInstances"
+            },
+            "MinSize" : {
+               "Ref" : "MinInstances"
+            },
+            "LoadBalancerNames" : [
+               {
+                  "Ref" : "ExternalElb"
+               }
+            ],
+            "AvailabilityZones" : {
+               "Fn::GetAZs" : ""
+            },
+            "DesiredCapacity" : {
+               "Ref" : "MinInstances"
+            },
+            "LaunchConfigurationName" : {
+               "Ref" : "LaunchConfig"
+            },
+            "HealthCheckGracePeriod" : 1200,
+            "Tags" : [
+               {
+                  "Value" : {
+                     "Ref" : "Owner"
+                  },
+                  "PropagateAtLaunch" : true,
+                  "Key" : "Owner"
+               },
+               {
+                  "Value" : {
+                     "Ref" : "Project"
+                  },
+                  "PropagateAtLaunch" : true,
+                  "Key" : "Project"
+               },
+               {
+                  "Value" : {
+                     "Ref" : "EnvironmentName"
+                  },
+                  "PropagateAtLaunch" : true,
+                  "Key" : "Environment Name"
+               },
+               {
+                  "Value" : {
+                     "Ref" : "EnvironmentName"
+                  },
+                  "PropagateAtLaunch" : true,
+                  "Key" : "Name"
+               },
+               {
+                  "Value" : {
+                     "Ref" : "StackType"
+                  },
+                  "PropagateAtLaunch" : true,
+                  "Key" : "StackType"
+               }
+            ],
+            "HealthCheckType" : "ELB",
+            "VPCZoneIdentifier" : [
+               {
+                  "Ref" : "SubnetAz1"
+               },
+               {
+                  "Ref" : "SubnetAz2"
+               }
+            ]
+         }
+      },
+      "ExternalKibanaElbSg" : {
+         "Type" : "AWS::EC2::SecurityGroup",
+         "Properties" : {
+            "VpcId" : {
+               "Ref" : "VpcId"
+            },
+            "GroupDescription" : "External Kibana Elastic Load Balancer Security Group"
+         }
+      },
+      "LinuxKibanaAnySsh" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+            "ToPort" : 22,
+            "GroupId" : {
+               "Ref" : "LinuxKibanaSg"
+            },
+            "FromPort" : 22,
+            "IpProtocol" : "tcp",
+            "CidrIp" : "0.0.0.0/0"
+         }
+      },
+      "LinuxKibanaAnyKibana" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+            "ToPort" : 80,
+            "GroupId" : {
+               "Ref" : "LinuxKibanaSg"
+            },
+            "FromPort" : 80,
+            "IpProtocol" : "tcp",
+            "CidrIp" : "0.0.0.0/0"
+         }
+      }
+   },
+   "AWSTemplateFormatVersion" : "2010-09-09",
+   "Outputs" : {
+      "LoadBalancer" : {
+         "Value" : {
+            "Ref" : "ExternalElb"
+         },
+         "Description" : "Load Balancer"
+      },
+      "ExternalKibanaElbSg" : {
+         "Value" : {
+            "Ref" : "ExternalKibanaElbSg"
+         },
+         "Description" : "External Kibana Elastic Load Balancer Security Group"
+      },
+      "LoadBalancerHostname" : {
+         "Value" : {
+            "Fn::GetAtt" : [
+               "ExternalElb",
+               "DNSName"
+            ]
+         },
+         "Description" : "Load Balancer Hostname"
+      },
+      "LinuxKibanaSg" : {
+         "Value" : {
+            "Ref" : "LinuxKibanaSg"
+         },
+         "Description" : "Linux Kibana Security Group"
+      }
+   },
+   "Mappings" : {
+      "AWSEC2InstanceType2Arch" : {
+         "t2.micro" : {
+            "Arch" : "64HVM"
+         },
+         "t1.micro" : {
+            "Arch" : "64HVM"
+         },
+         "m1.medium" : {
+            "Arch" : "64HVM"
+         },
+         "c3.4xlarge" : {
+            "Arch" : "64HVM"
+         },
+         "m3.xlarge" : {
+            "Arch" : "64HVM"
+         },
+         "c3.large" : {
+            "Arch" : "64HVM"
+         },
+         "t2.medium" : {
+            "Arch" : "64HVM"
+         },
+         "m1.large" : {
+            "Arch" : "64HVM"
+         },
+         "m1.xlarge" : {
+            "Arch" : "64HVM"
+         },
+         "m3.large" : {
+            "Arch" : "64HVM"
+         },
+         "c3.2xlarge" : {
+            "Arch" : "64HVM"
+         },
+         "m1.small" : {
+            "Arch" : "64HVM"
+         },
+         "c3.xlarge" : {
+            "Arch" : "64HVM"
+         },
+         "t2.small" : {
+            "Arch" : "64HVM"
+         },
+         "m3.medium" : {
+            "Arch" : "64HVM"
+         },
+         "c3.8xlarge" : {
+            "Arch" : "64HVM"
+         },
+         "m3.2xlarge" : {
+            "Arch" : "64HVM"
+         }
+      },
+      "AWSEC2RegionArch2AMI" : {
+         "sa-east-1" : {
+            "32" : "NOT_YET_SUPPORTED",
+            "64" : "NOT_YET_SUPPORTED",
+            "64HVM" : "ami-936cc68e"
+         },
+         "eu-west-1" : {
+            "32" : "NOT_YET_SUPPORTED",
+            "64" : "NOT_YET_SUPPORTED",
+            "64HVM" : "ami-768e2901"
+         },
+         "ap-southeast-1" : {
+            "32" : "NOT_YET_SUPPORTED",
+            "64" : "NOT_YET_SUPPORTED",
+            "64HVM" : "ami-d2e1c580"
+         },
+         "ap-northeast-1" : {
+            "32" : "NOT_YET_SUPPORTED",
+            "64" : "NOT_YET_SUPPORTED",
+            "64HVM" : "ami-45072844"
+         },
+         "us-east-1" : {
+            "32" : "NOT_YET_SUPPORTED",
+            "64" : "NOT_YET_SUPPORTED",
+            "64HVM" : "ami-34842d5c"
+         },
+         "us-west-2" : {
+            "32" : "NOT_YET_SUPPORTED",
+            "64" : "NOT_YET_SUPPORTED",
+            "64HVM" : "ami-8586c6b5"
+         },
+         "ap-southeast-2" : {
+            "32" : "NOT_YET_SUPPORTED",
+            "64" : "NOT_YET_SUPPORTED",
+            "64HVM" : "ami-fb4724c1"
+         },
+         "us-west-1" : {
+            "32" : "NOT_YET_SUPPORTED",
+            "64" : "NOT_YET_SUPPORTED",
+            "64HVM" : "ami-dba8a19e"
+         }
+      }
+   },
+   "Description" : "Linux Kibana Stack"
+}

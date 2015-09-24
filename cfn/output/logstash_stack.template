@@ -1,0 +1,1172 @@
+{
+   "Parameters" : {
+      "EnvironmentName" : {
+         "Type" : "String",
+         "Default" : "Micro Service 1",
+         "ConstraintDescription" : "must be a valid environment name",
+         "Description" : "Name applied to all resources within the stack"
+      },
+      "StackType" : {
+         "Type" : "String",
+         "Default" : "lsa",
+         "ConstraintDescription" : "must be a valid stack type",
+         "Description" : "Stack type"
+      },
+      "DnsResolverOverride" : {
+         "Type" : "String",
+         "Default" : "",
+         "Description" : "Comma-delimited list of one or more DNS resolver IP's"
+      },
+      "SubnetAz2" : {
+         "Type" : "String",
+         "AllowedPattern" : "subnet-[a-zA-Z0-9]{8}",
+         "Description" : "Subnet within AZ 2 to deploy instances"
+      },
+      "VpcId" : {
+         "Type" : "String",
+         "AllowedPattern" : "vpc-[a-zA-Z0-9]{8}",
+         "Description" : "VPC to deploy network resource into"
+      },
+      "KeyName" : {
+         "Type" : "String",
+         "Description" : "Name of an existing EC2 KeyPair to enable SSH access to the instances"
+      },
+      "ArchiveUri" : {
+         "Type" : "String",
+         "ConstraintDescription" : "must be a valid S3 bucket name",
+         "Description" : "Stack Archive URI"
+      },
+      "ResourceBucket" : {
+         "Type" : "String",
+         "ConstraintDescription" : "must be a valid S3 bucket name",
+         "Description" : "Resource bucket"
+      },
+      "EsHostname" : {
+         "Type" : "String",
+         "ConstraintDescription" : "must be a valid hostname",
+         "Description" : "Elasticsearch Hostname"
+      },
+      "LsVersion" : {
+         "Type" : "String",
+         "Default" : "1.4.2",
+         "ConstraintDescription" : "must be a valid logstash version",
+         "Description" : "Logstash Version - only used when installing using the source based configSets"
+      },
+      "Owner" : {
+         "Type" : "String",
+         "ConstraintDescription" : "must be a valid email address",
+         "Description" : "Stack owner"
+      },
+      "MaxInstances" : {
+         "MaxValue" : 8,
+         "Type" : "Number",
+         "Default" : 2,
+         "MinValue" : 1,
+         "ConstraintDescription" : "must be between 1 and 8.",
+         "Description" : "Maximum number of Es instances"
+      },
+      "SubnetAz1" : {
+         "Type" : "String",
+         "AllowedPattern" : "subnet-[a-zA-Z0-9]{8}",
+         "Description" : "Subnet within AZ 1 to deploy instances"
+      },
+      "MinInstances" : {
+         "MaxValue" : 4,
+         "Type" : "Number",
+         "Default" : 2,
+         "MinValue" : 1,
+         "ConstraintDescription" : "must be between 1 and 4.",
+         "Description" : "Minimum number of Es instances"
+      },
+      "EC2InstanceType" : {
+         "AllowedValues" : [
+            "t1.micro",
+            "t2.micro",
+            "t2.small",
+            "t2.medium",
+            "m1.small",
+            "m1.medium",
+            "m1.large",
+            "m1.xlarge",
+            "m3.medium",
+            "m3.large",
+            "m3.xlarge",
+            "m3.2xlarge",
+            "c3.large",
+            "c3.xlarge",
+            "c3.2xlarge",
+            "c3.4xlarge",
+            "c3.8xlarge"
+         ],
+         "Type" : "String",
+         "Default" : "t2.medium",
+         "ConstraintDescription" : "must be a valid EC2 instance type",
+         "Description" : "EC2 instance type"
+      },
+      "Project" : {
+         "Type" : "String",
+         "Description" : "Project name"
+      },
+      "PrimaryVolumeSize" : {
+         "MaxValue" : 1000,
+         "Type" : "Number",
+         "Default" : 50,
+         "MinValue" : 1,
+         "ConstraintDescription" : "must be between 1 and 750.",
+         "Description" : "Primary Volume Size in Gb"
+      }
+   },
+   "Resources" : {
+      "EsCPUAlarmHigh" : {
+         "DependsOn" : [
+            "EsScaleUpPolicy"
+         ],
+         "Type" : "AWS::CloudWatch::Alarm",
+         "Properties" : {
+            "Dimensions" : [
+               {
+                  "Value" : {
+                     "Ref" : "AutoScalingGroup"
+                  },
+                  "Name" : "AutoScalingGroupName"
+               }
+            ],
+            "EvaluationPeriods" : 5,
+            "AlarmActions" : [
+               {
+                  "Ref" : "EsScaleUpPolicy"
+               }
+            ],
+            "Period" : 60,
+            "ComparisonOperator" : "GreaterThanThreshold",
+            "Statistic" : "Average",
+            "Namespace" : "AWS/EC2",
+            "AlarmDescription" : "Scale-up if CPU > 65% for 5 minutes",
+            "Threshold" : 65,
+            "MetricName" : "CPUUtilization"
+         }
+      },
+      "LaunchConfig" : {
+         "DependsOn" : [
+            "InstanceProfile"
+         ],
+         "Type" : "AWS::AutoScaling::LaunchConfiguration",
+         "Properties" : {
+            "KeyName" : {
+               "Ref" : "KeyName"
+            },
+            "ImageId" : {
+               "Fn::FindInMap" : [
+                  "AWSEC2RegionArch2AMI",
+                  {
+                     "Ref" : "AWS::Region"
+                  },
+                  {
+                     "Fn::FindInMap" : [
+                        "AWSEC2InstanceType2Arch",
+                        {
+                           "Ref" : "EC2InstanceType"
+                        },
+                        "Arch"
+                     ]
+                  }
+               ]
+            },
+            "InstanceType" : {
+               "Ref" : "EC2InstanceType"
+            },
+            "BlockDeviceMappings" : [
+               {
+                  "Ebs" : {
+                     "VolumeSize" : {
+                        "Ref" : "PrimaryVolumeSize"
+                     },
+                     "DeleteOnTermination" : "true",
+                     "VolumeType" : "gp2"
+                  },
+                  "DeviceName" : "/dev/xvda"
+               }
+            ],
+            "UserData" : {
+               "Fn::Base64" : {
+                  "Fn::Join" : [
+                     "",
+                     [
+                        "#!/bin/bash -v \n",
+                        "yum update -y\n",
+                        "# Helper function\n",
+                        "function error_exit\n",
+                        "{\n",
+                        "  /opt/aws/bin/cfn-signal -e 1 -r \"$1\" '",
+                        {
+                           "Ref" : "WaitHandle"
+                        },
+                        "'\n",
+                        "  exit 1\n",
+                        "}\n",
+                        "# CloudFormation init start\n",
+                        "/opt/aws/bin/cfn-init -v -c default -s ",
+                        {
+                           "Ref" : "AWS::StackId"
+                        },
+                        " -r LaunchConfig --region ",
+                        {
+                           "Ref" : "AWS::Region"
+                        },
+                        "\n",
+                        "# Determine if ls installed successfully\n",
+                        "if [[ ! -e /opt/logstash/bin/logstash ]]; then\n",
+                        "  error_exit \"logstash failed to install successfully\"\n",
+                        "fi\n",
+                        "# Determine if the ls configuration was successful\n",
+                        "$(grep -q ",
+                        {
+                           "Ref" : "EsHostname"
+                        },
+                        " /etc/logstash/conf.d/*)\n",
+                        "if [[ $? != 0 ]]; then\n",
+                        "        error_exit \"logstash configuration failed\"\n",
+                        "fi\n",
+                        "# Determine if ls started successfully\n",
+                        "let iterations=10\n",
+                        "for i in $(seq 0 ${iterations});\n",
+                        "do\n",
+                        "  $(ps ax |grep -q [l]ogstash/runner.rb)\n",
+                        "\n",
+                        "  status=$?\n",
+                        "\n",
+                        "  if [[ ${status} != 0 ]] && [[ ${i} == ${iterations} ]]; then\n",
+                        "    error_exit \"logstash failed to start\"\n",
+                        "  elif [[ ${status} != 0 ]]; then\n",
+                        "    echo \"waiting for logstash to start\"\n",
+                        "  else\n",
+                        "    continue\n",
+                        "  fi\n",
+                        "\n",
+                        "  sleep 5\n",
+                        "done\n",
+                        "## CloudFormation signal that setup is complete\n",
+                        "/opt/aws/bin/cfn-signal -e 0 -r \"Logstash setup complete\" '",
+                        {
+                           "Ref" : "WaitHandle"
+                        },
+                        "'\n"
+                     ]
+                  ]
+               }
+            },
+            "IamInstanceProfile" : {
+               "Ref" : "InstanceProfile"
+            },
+            "SecurityGroups" : [
+               {
+                  "Ref" : "LinuxLsSg"
+               }
+            ]
+         },
+         "Metadata" : {
+            "AWS::CloudFormation::Authentication" : {
+               "s3access" : {
+                  "buckets" : [
+                     {
+                        "Ref" : "ResourceBucket"
+                     }
+                  ],
+                  "type" : "s3",
+                  "roleName" : {
+                     "Ref" : "InstanceRole"
+                  }
+               }
+            },
+            "AWS::CloudFormation::Init" : {
+               "installLsConfigs" : {
+                  "sources" : {
+                     "/etc/logstash" : {
+                        "Fn::Join" : [
+                           "",
+                           [
+                              "https://",
+                              {
+                                 "Ref" : "ResourceBucket"
+                              },
+                              ".s3.amazonaws.com",
+                              "/",
+                              {
+                                 "Ref" : "ArchiveUri"
+                              },
+                              "/source.zip"
+                           ]
+                        ]
+                     }
+                  },
+                  "commands" : {
+                     "1-updateLsConfigs" : {
+                        "command" : {
+                           "Fn::Join" : [
+                              "",
+                              [
+                                 "sed -i -e 's/es\\.myhost\\.org/",
+                                 {
+                                    "Ref" : "EsHostname"
+                                 },
+                                 "/g' /etc/logstash/conf.d/*"
+                              ]
+                           ]
+                        }
+                     }
+                  }
+               },
+               "setupLsFromSource" : {
+                  "files" : {
+                     "/etc/init.d/logstash" : {
+                        "content" : {
+                           "Fn::Join" : [
+                              "",
+                              [
+                                 "#!/bin/sh\n",
+                                 "# Init script for logstash\n",
+                                 "# Maintained by Elasticsearch\n",
+                                 "# Generated by pleaserun.\n",
+                                 "# Implemented based on LSB Core 3.1:\n",
+                                 "#   * Sections: 20.2, 20.3\n",
+                                 "#\n",
+                                 "### BEGIN INIT INFO\n",
+                                 "# Provides:          logstash\n",
+                                 "# Required-Start:    $remote_fs $syslog\n",
+                                 "# Required-Stop:     $remote_fs $syslog\n",
+                                 "# Default-Start:     2 3 4 5\n",
+                                 "# Default-Stop:      0 1 6\n",
+                                 "# Short-Description: \n",
+                                 "# Description:        Starts Logstash as a daemon.\n",
+                                 "### END INIT INFO\n",
+                                 "\n",
+                                 "PATH=/sbin:/usr/sbin:/bin:/usr/bin\n",
+                                 "export PATH\n",
+                                 "\n",
+                                 "if [ `id -u` -ne 0 ]; then\n",
+                                 "   echo \"You need root privileges to run this script\"\n",
+                                 "   exit 1\n",
+                                 "fi\n",
+                                 "\n",
+                                 "name=logstash\n",
+                                 "pidfile=\"/var/run/$name.pid\"\n",
+                                 "\n",
+                                 "LS_USER=logstash\n",
+                                 "LS_GROUP=logstash\n",
+                                 "LS_HOME=/var/lib/logstash\n",
+                                 "LS_HEAP_SIZE=\"500m\"\n",
+                                 "LS_JAVA_OPTS=\"-Djava.io.tmpdir=${LS_HOME}\"\n",
+                                 "LS_LOG_DIR=/var/log/logstash\n",
+                                 "LS_LOG_FILE=\"${LS_LOG_DIR}/$name.log\"\n",
+                                 "LS_CONF_DIR=/etc/logstash/conf.d\n",
+                                 "LS_OPEN_FILES=16384\n",
+                                 "LS_NICE=19\n",
+                                 "LS_OPTS=\"\"\n",
+                                 "\n",
+                                 "[ -r /etc/default/$name ] && . /etc/default/$name\n",
+                                 "[ -r /etc/sysconfig/$name ] && . /etc/sysconfig/$name\n",
+                                 "\n",
+                                 "program=/opt/logstash/bin/logstash\n",
+                                 "args=\"agent -f ${LS_CONF_DIR} -l ${LS_LOG_FILE} ${LS_OPTS}\"\n",
+                                 "\n",
+                                 "start() {\n",
+                                 "\n",
+                                 "\n",
+                                 "  JAVA_OPTS=${LS_JAVA_OPTS}\n",
+                                 "  HOME=${LS_HOME}\n",
+                                 "  export PATH HOME JAVA_OPTS LS_HEAP_SIZE LS_JAVA_OPTS LS_USE_GC_LOGGING\n",
+                                 "\n",
+                                 "  # set ulimit as (root, presumably) first, before we drop privileges\n",
+                                 "  ulimit -n ${LS_OPEN_FILES}\n",
+                                 "\n",
+                                 "  # Run the program!\n",
+                                 "  nice -n ${LS_NICE} chroot --userspec $LS_USER:$LS_GROUP / sh -c \"\n",
+                                 "    cd $LS_HOME\n",
+                                 "    ulimit -n ${LS_OPEN_FILES}\n",
+                                 "    exec \\\"$program\\\" $args\n",
+                                 "  \" > \"${LS_LOG_DIR}/$name.stdout\" 2> \"${LS_LOG_DIR}/$name.err\" &\n",
+                                 "\n",
+                                 "  # Generate the pidfile from here. If we instead made the forked process\n",
+                                 "  # generate it there will be a race condition between the pidfile writing\n",
+                                 "  # and a process possibly asking for status.\n",
+                                 "  echo $! > $pidfile\n",
+                                 "\n",
+                                 "  echo \"$name started.\"\n",
+                                 "  return 0\n",
+                                 "}\n",
+                                 "\n",
+                                 "stop() {\n",
+                                 "  # Try a few times to kill TERM the program\n",
+                                 "  if status ; then\n",
+                                 "    pid=`cat \"$pidfile\"`\n",
+                                 "    echo \"Killing $name (pid $pid) with SIGTERM\"\n",
+                                 "    kill -TERM $pid\n",
+                                 "    # Wait for it to exit.\n",
+                                 "    for i in 1 2 3 4 5 ; do\n",
+                                 "      echo \"Waiting $name (pid $pid) to die...\"\n",
+                                 "      status || break\n",
+                                 "      sleep 1\n",
+                                 "    done\n",
+                                 "    if status ; then\n",
+                                 "      echo \"$name stop failed; still running.\"\n",
+                                 "    else\n",
+                                 "      echo \"$name stopped.\"\n",
+                                 "    fi\n",
+                                 "  fi\n",
+                                 "}\n",
+                                 "\n",
+                                 "status() {\n",
+                                 "  if [ -f \"$pidfile\" ] ; then\n",
+                                 "    pid=`cat \"$pidfile\"`\n",
+                                 "    if kill -0 $pid > /dev/null 2> /dev/null ; then\n",
+                                 "      # process by this pid is running.\n",
+                                 "      # It may not be our pid, but that's what you get with just pidfiles.\n",
+                                 "      # TODO(sissel): Check if this process seems to be the same as the one we\n",
+                                 "      # expect. It'd be nice to use flock here, but flock uses fork, not exec,\n",
+                                 "      # so it makes it quite awkward to use in this case.\n",
+                                 "      return 0\n",
+                                 "    else\n",
+                                 "      return 2 # program is dead but pid file exists\n",
+                                 "    fi\n",
+                                 "  else\n",
+                                 "    return 3 # program is not running\n",
+                                 "  fi\n",
+                                 "}\n",
+                                 "\n",
+                                 "force_stop() {\n",
+                                 "  if status ; then\n",
+                                 "    stop\n",
+                                 "    status && kill -KILL `cat \"$pidfile\"`\n",
+                                 "  fi\n",
+                                 "}\n",
+                                 "\n",
+                                 "\n",
+                                 "case \"$1\" in\n",
+                                 "  start)\n",
+                                 "    status\n",
+                                 "    code=$?\n",
+                                 "    if [ $code -eq 0 ]; then\n",
+                                 "      echo \"$name is already running\"\n",
+                                 "    else\n",
+                                 "      start\n",
+                                 "      code=$?\n",
+                                 "    fi\n",
+                                 "    exit $code\n",
+                                 "    ;;\n",
+                                 "  stop) stop ;;\n",
+                                 "  force-stop) force_stop ;;\n",
+                                 "  status) \n",
+                                 "    status\n",
+                                 "    code=$?\n",
+                                 "    if [ $code -eq 0 ] ; then\n",
+                                 "      echo \"$name is running\"\n",
+                                 "    else\n",
+                                 "      echo \"$name is not running\"\n",
+                                 "    fi\n",
+                                 "    exit $code\n",
+                                 "    ;;\n",
+                                 "  restart) \n",
+                                 "    \n",
+                                 "    stop && start \n",
+                                 "    ;;\n",
+                                 "  *)\n",
+                                 "    echo \"Usage: $SCRIPTNAME {start|stop|force-stop|status|restart}\" >&2\n",
+                                 "    exit 3\n",
+                                 "  ;;\n",
+                                 "esac\n",
+                                 "\n",
+                                 "exit $?\n"
+                              ]
+                           ]
+                        }
+                     }
+                  },
+                  "commands" : {
+                     "4-setupLsInit" : {
+                        "command" : {
+                           "Fn::Join" : [
+                              "",
+                              [
+                                 "chmod 755 /etc/init.d/logstash"
+                              ]
+                           ]
+                        }
+                     },
+                     "1-createLsUser" : {
+                        "command" : {
+                           "Fn::Join" : [
+                              "",
+                              [
+                                 "useradd -s /sbin/nologin -M -d /opt/logstash logstash"
+                              ]
+                           ]
+                        }
+                     },
+                     "2-createLsVarDir" : {
+                        "command" : {
+                           "Fn::Join" : [
+                              "",
+                              [
+                                 "mkdir /var/lib/logstash && chown logstash:logstash /var/lib/logstash"
+                              ]
+                           ]
+                        }
+                     },
+                     "3-createLsLogDir" : {
+                        "command" : {
+                           "Fn::Join" : [
+                              "",
+                              [
+                                 "mkdir /var/log/logstash && chown logstash:logstash /var/log/logstash"
+                              ]
+                           ]
+                        }
+                     }
+                  }
+               },
+               "configureLsRepo" : {
+                  "files" : {
+                     "/etc/yum.repos.d/logstash.repo" : {
+                        "content" : {
+                           "Fn::Join" : [
+                              "",
+                              [
+                                 "[logstash-1.4]\n",
+                                 "name=logstash repository for 1.4.x packages\n",
+                                 "baseurl=http://packages.elasticsearch.org/logstash/1.4/centos\n",
+                                 "gpgcheck=1\n",
+                                 "gpgkey=http://packages.elasticsearch.org/GPG-KEY-elasticsearch\n",
+                                 "enabled=1\n"
+                              ]
+                           ]
+                        }
+                     }
+                  },
+                  "commands" : {
+                     "createSymlink" : {
+                        "command" : {
+                           "Fn::Join" : [
+                              "",
+                              [
+                                 "rpm --import http://packages.elasticsearch.org/GPG-KEY-elasticsearch"
+                              ]
+                           ]
+                        }
+                     }
+                  }
+               },
+               "runLsAsService" : {
+                  "commands" : {
+                     "1-chkLsService" : {
+                        "command" : {
+                           "Fn::Join" : [
+                              "",
+                              [
+                                 "/sbin/chkconfig --level 2345 logstash on"
+                              ]
+                           ]
+                        }
+                     },
+                     "2-startLsService" : {
+                        "command" : {
+                           "Fn::Join" : [
+                              "",
+                              [
+                                 "/etc/init.d/logstash start"
+                              ]
+                           ]
+                        }
+                     }
+                  }
+               },
+               "configSets" : {
+                  "default" : [
+                     "downloadLsSource",
+                     "setupLsFromSource",
+                     "installLsConfigs",
+                     "dnsOverride",
+                     "runLsAsService"
+                  ]
+               },
+               "dnsOverride" : {
+                  "commands" : {
+                     "overrideDns" : {
+                        "command" : {
+                           "Fn::Join" : [
+                              "",
+                              [
+                                 "DnsResolverOverride=\"",
+                                 {
+                                    "Ref" : "DnsResolverOverride"
+                                 },
+                                 "\"\n",
+                                 "if [[ -n ${DnsResolverOverride} ]]; then\n",
+                                 " sed -i 's/^PEERDNS.*/PEERDNS=no/g' /etc/sysconfig/network-scripts/ifcfg-eth0\n",
+                                 " sed -i '/^nameserver/ d' /etc/resolv.conf\n",
+                                 "\n",
+                                 "DnsResolverList=$(echo ${DnsResolverOverride} | sed s/,/\\\n/g)\n",
+                                 "for resolver in $(echo ${DnsResolverList}); do\n",
+                                 " echo \"nameserver $resolver\" >> /etc/resolv.conf\n",
+                                 "done\n",
+                                 "fi\n"
+                              ]
+                           ]
+                        }
+                     }
+                  }
+               },
+               "downloadLsSource" : {
+                  "sources" : {
+                     "/opt" : {
+                        "Fn::Join" : [
+                           "",
+                           [
+                              "https://download.elasticsearch.org/logstash/logstash/logstash-",
+                              {
+                                 "Ref" : "LsVersion"
+                              },
+                              ".zip"
+                           ]
+                        ]
+                     }
+                  },
+                  "commands" : {
+                     "createSymlink" : {
+                        "command" : {
+                           "Fn::Join" : [
+                              "",
+                              [
+                                 "cd /opt && ln -s logstash-",
+                                 {
+                                    "Ref" : "LsVersion"
+                                 },
+                                 " logstash"
+                              ]
+                           ]
+                        }
+                     },
+                     "fixLsPermssions" : {
+                        "command" : {
+                           "Fn::Join" : [
+                              "",
+                              [
+                                 "chmod +x /opt/logstash-",
+                                 {
+                                    "Ref" : "LsVersion"
+                                 },
+                                 "/bin/*"
+                              ]
+                           ]
+                        }
+                     }
+                  }
+               },
+               "installLsFromRepo" : {
+                  "commands" : {
+                     "yumInstallLs" : {
+                        "command" : {
+                           "Fn::Join" : [
+                              "",
+                              [
+                                 "yum install logstash -y"
+                              ]
+                           ]
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      },
+      "WaitHandle" : {
+         "Type" : "AWS::CloudFormation::WaitConditionHandle"
+      },
+      "EsScaleDownPolicy" : {
+         "DependsOn" : "AutoScalingGroup",
+         "Type" : "AWS::AutoScaling::ScalingPolicy",
+         "Properties" : {
+            "AdjustmentType" : "ChangeInCapacity",
+            "ScalingAdjustment" : -2,
+            "AutoScalingGroupName" : {
+               "Ref" : "AutoScalingGroup"
+            },
+            "Cooldown" : 60
+         }
+      },
+      "LinuxLsAnyLs" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+            "ToPort" : 9299,
+            "GroupId" : {
+               "Ref" : "LinuxLsSg"
+            },
+            "FromPort" : 9299,
+            "IpProtocol" : "tcp",
+            "CidrIp" : "0.0.0.0/0"
+         }
+      },
+      "InstanceRole" : {
+         "Type" : "AWS::IAM::Role",
+         "Properties" : {
+            "AssumeRolePolicyDocument" : {
+               "Statement" : [
+                  {
+                     "Effect" : "Allow",
+                     "Action" : [
+                        "sts:AssumeRole"
+                     ],
+                     "Principal" : {
+                        "Service" : [
+                           "ec2.amazonaws.com"
+                        ]
+                     }
+                  }
+               ]
+            },
+            "Policies" : [
+               {
+                  "PolicyDocument" : {
+                     "Statement" : [
+                        {
+                           "Effect" : "Allow",
+                           "Resource" : [
+                              {
+                                 "Fn::Join" : [
+                                    "",
+                                    [
+                                       "arn:aws:s3:::",
+                                       {
+                                          "Ref" : "ResourceBucket"
+                                       }
+                                    ]
+                                 ]
+                              }
+                           ],
+                           "Action" : [
+                              "s3:ListBucket"
+                           ]
+                        },
+                        {
+                           "Effect" : "Allow",
+                           "Resource" : [
+                              {
+                                 "Fn::Join" : [
+                                    "",
+                                    [
+                                       "arn:aws:s3:::",
+                                       {
+                                          "Ref" : "ResourceBucket"
+                                       },
+                                       "/*"
+                                    ]
+                                 ]
+                              }
+                           ],
+                           "Action" : [
+                              "s3:GetObject",
+                              "s3:PutObject",
+                              "s3:DeleteObject"
+                           ]
+                        }
+                     ]
+                  },
+                  "PolicyName" : "S3ResourceBucketAccess"
+               }
+            ],
+            "Path" : "/"
+         }
+      },
+      "InternalLsElbSg" : {
+         "Type" : "AWS::EC2::SecurityGroup",
+         "Properties" : {
+            "VpcId" : {
+               "Ref" : "VpcId"
+            },
+            "GroupDescription" : "Internal Logstash Elastic Load Balancer Security Group"
+         }
+      },
+      "LinuxLsAnyAll" : {
+         "Type" : "AWS::EC2::SecurityGroupEgress",
+         "Properties" : {
+            "ToPort" : 65535,
+            "GroupId" : {
+               "Ref" : "LinuxLsSg"
+            },
+            "FromPort" : 0,
+            "IpProtocol" : "-1",
+            "CidrIp" : "0.0.0.0/0"
+         }
+      },
+      "InternalElbAnyLs" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+            "ToPort" : 9299,
+            "GroupId" : {
+               "Ref" : "InternalLsElbSg"
+            },
+            "FromPort" : 9299,
+            "IpProtocol" : "tcp",
+            "CidrIp" : "0.0.0.0/0"
+         }
+      },
+      "EsCPUAlarmLow" : {
+         "DependsOn" : [
+            "EsScaleDownPolicy"
+         ],
+         "Type" : "AWS::CloudWatch::Alarm",
+         "Properties" : {
+            "Dimensions" : [
+               {
+                  "Value" : {
+                     "Ref" : "AutoScalingGroup"
+                  },
+                  "Name" : "AutoScalingGroupName"
+               }
+            ],
+            "EvaluationPeriods" : 20,
+            "AlarmActions" : [
+               {
+                  "Ref" : "EsScaleDownPolicy"
+               }
+            ],
+            "Period" : 60,
+            "ComparisonOperator" : "LessThanThreshold",
+            "Statistic" : "Average",
+            "Namespace" : "AWS/EC2",
+            "AlarmDescription" : "Scale-down if CPU < 35% for 20 minutes",
+            "Threshold" : 35,
+            "MetricName" : "CPUUtilization"
+         }
+      },
+      "LinuxLsAnySsh" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+            "ToPort" : 22,
+            "GroupId" : {
+               "Ref" : "LinuxLsSg"
+            },
+            "FromPort" : 22,
+            "IpProtocol" : "tcp",
+            "CidrIp" : "0.0.0.0/0"
+         }
+      },
+      "InternalElb" : {
+         "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+         "Properties" : {
+            "HealthCheck" : {
+               "Interval" : 6,
+               "Target" : {
+                  "Fn::Join" : [
+                     "",
+                     [
+                        "TCP",
+                        ":",
+                        "9299"
+                     ]
+                  ]
+               },
+               "Timeout" : 5,
+               "UnhealthyThreshold" : 7,
+               "HealthyThreshold" : 7
+            },
+            "Subnets" : [
+               {
+                  "Ref" : "SubnetAz1"
+               },
+               {
+                  "Ref" : "SubnetAz2"
+               }
+            ],
+            "Scheme" : "internal",
+            "Listeners" : [
+               {
+                  "InstancePort" : "9299",
+                  "Protocol" : "TCP",
+                  "LoadBalancerPort" : "9299"
+               }
+            ],
+            "ConnectionDrainingPolicy" : {
+               "Enabled" : true,
+               "Timeout" : 300
+            },
+            "CrossZone" : true,
+            "SecurityGroups" : [
+               {
+                  "Ref" : "InternalLsElbSg"
+               }
+            ]
+         }
+      },
+      "WaitCondition" : {
+         "Type" : "AWS::CloudFormation::WaitCondition",
+         "Properties" : {
+            "Timeout" : 1200,
+            "Handle" : {
+               "Ref" : "WaitHandle"
+            }
+         }
+      },
+      "InstanceProfile" : {
+         "DependsOn" : "InstanceRole",
+         "Type" : "AWS::IAM::InstanceProfile",
+         "Properties" : {
+            "Roles" : [
+               {
+                  "Ref" : "InstanceRole"
+               }
+            ],
+            "Path" : "/"
+         }
+      },
+      "EsScaleUpPolicy" : {
+         "DependsOn" : "AutoScalingGroup",
+         "Type" : "AWS::AutoScaling::ScalingPolicy",
+         "Properties" : {
+            "AdjustmentType" : "ChangeInCapacity",
+            "ScalingAdjustment" : 2,
+            "AutoScalingGroupName" : {
+               "Ref" : "AutoScalingGroup"
+            },
+            "Cooldown" : 60
+         }
+      },
+      "ElbAnyAll" : {
+         "Type" : "AWS::EC2::SecurityGroupEgress",
+         "Properties" : {
+            "ToPort" : 65535,
+            "GroupId" : {
+               "Ref" : "InternalLsElbSg"
+            },
+            "FromPort" : 0,
+            "IpProtocol" : "-1",
+            "CidrIp" : "0.0.0.0/0"
+         }
+      },
+      "AutoScalingGroup" : {
+         "DependsOn" : [
+            "LaunchConfig"
+         ],
+         "Type" : "AWS::AutoScaling::AutoScalingGroup",
+         "Properties" : {
+            "MaxSize" : {
+               "Ref" : "MaxInstances"
+            },
+            "MinSize" : {
+               "Ref" : "MinInstances"
+            },
+            "LoadBalancerNames" : [
+               {
+                  "Ref" : "InternalElb"
+               }
+            ],
+            "AvailabilityZones" : {
+               "Fn::GetAZs" : ""
+            },
+            "DesiredCapacity" : {
+               "Ref" : "MinInstances"
+            },
+            "LaunchConfigurationName" : {
+               "Ref" : "LaunchConfig"
+            },
+            "HealthCheckGracePeriod" : 1200,
+            "Tags" : [
+               {
+                  "Value" : {
+                     "Ref" : "Owner"
+                  },
+                  "PropagateAtLaunch" : true,
+                  "Key" : "Owner"
+               },
+               {
+                  "Value" : {
+                     "Ref" : "Project"
+                  },
+                  "PropagateAtLaunch" : true,
+                  "Key" : "Project"
+               },
+               {
+                  "Value" : {
+                     "Ref" : "EnvironmentName"
+                  },
+                  "PropagateAtLaunch" : true,
+                  "Key" : "Environment Name"
+               },
+               {
+                  "Value" : {
+                     "Ref" : "EnvironmentName"
+                  },
+                  "PropagateAtLaunch" : true,
+                  "Key" : "Name"
+               },
+               {
+                  "Value" : {
+                     "Ref" : "StackType"
+                  },
+                  "PropagateAtLaunch" : true,
+                  "Key" : "StackType"
+               }
+            ],
+            "HealthCheckType" : "EC2",
+            "VPCZoneIdentifier" : [
+               {
+                  "Ref" : "SubnetAz1"
+               },
+               {
+                  "Ref" : "SubnetAz2"
+               }
+            ]
+         }
+      },
+      "LinuxLsSg" : {
+         "Type" : "AWS::EC2::SecurityGroup",
+         "Properties" : {
+            "VpcId" : {
+               "Ref" : "VpcId"
+            },
+            "GroupDescription" : "Logstash Instances Security Group"
+         }
+      },
+      "InternalElbLinuxLs" : {
+         "Type" : "AWS::EC2::SecurityGroupIngress",
+         "Properties" : {
+            "ToPort" : 9299,
+            "GroupId" : {
+               "Ref" : "LinuxLsSg"
+            },
+            "FromPort" : 9299,
+            "SourceSecurityGroupId" : {
+               "Ref" : "InternalLsElbSg"
+            },
+            "IpProtocol" : "tcp"
+         }
+      }
+   },
+   "AWSTemplateFormatVersion" : "2010-09-09",
+   "Outputs" : {
+      "InternalLsElbSg" : {
+         "Value" : {
+            "Ref" : "InternalLsElbSg"
+         },
+         "Description" : "Internal Logstash Elastic Load Balancer Security Group"
+      },
+      "LoadBalancer" : {
+         "Value" : {
+            "Ref" : "InternalElb"
+         },
+         "Description" : "Load Balancer"
+      },
+      "LoadBalancerHostname" : {
+         "Value" : {
+            "Fn::GetAtt" : [
+               "InternalElb",
+               "DNSName"
+            ]
+         },
+         "Description" : "Load Balancer Hostname"
+      },
+      "LinuxLsSg" : {
+         "Value" : {
+            "Ref" : "LinuxLsSg"
+         },
+         "Description" : "Linux Logstash Security Group"
+      }
+   },
+   "Mappings" : {
+      "AWSEC2InstanceType2Arch" : {
+         "t2.micro" : {
+            "Arch" : "64HVM"
+         },
+         "t1.micro" : {
+            "Arch" : "64HVM"
+         },
+         "m1.medium" : {
+            "Arch" : "64HVM"
+         },
+         "c3.4xlarge" : {
+            "Arch" : "64HVM"
+         },
+         "m3.xlarge" : {
+            "Arch" : "64HVM"
+         },
+         "c3.large" : {
+            "Arch" : "64HVM"
+         },
+         "t2.medium" : {
+            "Arch" : "64HVM"
+         },
+         "m1.large" : {
+            "Arch" : "64HVM"
+         },
+         "m1.xlarge" : {
+            "Arch" : "64HVM"
+         },
+         "m3.large" : {
+            "Arch" : "64HVM"
+         },
+         "c3.2xlarge" : {
+            "Arch" : "64HVM"
+         },
+         "m1.small" : {
+            "Arch" : "64HVM"
+         },
+         "c3.xlarge" : {
+            "Arch" : "64HVM"
+         },
+         "t2.small" : {
+            "Arch" : "64HVM"
+         },
+         "m3.medium" : {
+            "Arch" : "64HVM"
+         },
+         "c3.8xlarge" : {
+            "Arch" : "64HVM"
+         },
+         "m3.2xlarge" : {
+            "Arch" : "64HVM"
+         }
+      },
+      "AWSEC2RegionArch2AMI" : {
+         "sa-east-1" : {
+            "32" : "NOT_YET_SUPPORTED",
+            "64" : "NOT_YET_SUPPORTED",
+            "64HVM" : "ami-936cc68e"
+         },
+         "eu-west-1" : {
+            "32" : "NOT_YET_SUPPORTED",
+            "64" : "NOT_YET_SUPPORTED",
+            "64HVM" : "ami-768e2901"
+         },
+         "ap-southeast-1" : {
+            "32" : "NOT_YET_SUPPORTED",
+            "64" : "NOT_YET_SUPPORTED",
+            "64HVM" : "ami-d2e1c580"
+         },
+         "ap-northeast-1" : {
+            "32" : "NOT_YET_SUPPORTED",
+            "64" : "NOT_YET_SUPPORTED",
+            "64HVM" : "ami-45072844"
+         },
+         "us-east-1" : {
+            "32" : "NOT_YET_SUPPORTED",
+            "64" : "NOT_YET_SUPPORTED",
+            "64HVM" : "ami-34842d5c"
+         },
+         "us-west-2" : {
+            "32" : "NOT_YET_SUPPORTED",
+            "64" : "NOT_YET_SUPPORTED",
+            "64HVM" : "ami-8586c6b5"
+         },
+         "ap-southeast-2" : {
+            "32" : "NOT_YET_SUPPORTED",
+            "64" : "NOT_YET_SUPPORTED",
+            "64HVM" : "ami-fb4724c1"
+         },
+         "us-west-1" : {
+            "32" : "NOT_YET_SUPPORTED",
+            "64" : "NOT_YET_SUPPORTED",
+            "64HVM" : "ami-dba8a19e"
+         }
+      }
+   },
+   "Description" : "Linux Logstash Stack"
+}
